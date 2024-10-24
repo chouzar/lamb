@@ -3,10 +3,11 @@ version = "0.0.1"
 
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
-#
-# description = ""
-# licences = ["Apache-2.0"]
-# repository = { type = "github", user = "", repo = "" }
+
+description = "ETS for Gleam language."
+licences = ["Apache-2.0"]
+repository = { type = "github", user = "chouzar", repo = "lamb" }
+
 # links = [{ title = "Website", href = "" }]
 #
 # For a full reference of all the available options, you can have a look at
