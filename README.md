@@ -3,14 +3,25 @@
 [![Package Version](https://img.shields.io/hexpm/v/lamb)](https://hex.pm/packages/lamb)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/lamb/)
 
-```sh
-gleam add lamb@1
-```
+A gleam library for operating and querying ETS tables.
+
 ```gleam
 import lamb
 
 pub fn main() {
-  // TODO: An example of the project in use
+  let assert Ok(table) = lamb.create_table(Private, "test_table")
+
+  lamb.insert(table, "a", 1)
+  lamb.insert(table, "b", 2)
+  lamb.insert(table, "c", 3)
+  lamb.insert(table, "d", 4)
+  lamb.insert(table, "e", 5)
+
+  let assert Records([_, _] as a, step) = lamb.partial(table, by: 2)
+  let assert Records([_, _] as b, step) = lamb.continue(step)
+  let assert End([_] as c) = lamb.continue(step)
+
+  lamb.delete_table(table)
 }
 ```
 
