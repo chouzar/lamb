@@ -1,7 +1,7 @@
 import artifacts/record
 import gleam/io
 import gleam/iterator
-import lamb.{type Table, Private, Protected}
+import lamb.{type Table, Private}
 
 pub fn table(name: String, function: fn(Table(index, record)) -> x) -> Nil {
   // Initialization
@@ -20,7 +20,7 @@ pub fn table(name: String, function: fn(Table(index, record)) -> x) -> Nil {
 }
 
 pub fn users_table(records quantity: Int) -> Table(Int, record.Record) {
-  let assert Ok(table) = lamb.create_table(Protected, "test_users")
+  let assert Ok(table) = lamb.create_table(Private, "test_users")
 
   let enum =
     iterator.from_list([0, 1, 2])

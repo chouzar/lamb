@@ -1,10 +1,11 @@
 import gleam/erlang
 import gleam/erlang/atom
+import lamb/query.{type Query}
 
 // ------ Table API ------ //
 
 pub opaque type Table(index, record) {
-  Table(TableId)
+  Table(reference: TableId)
 }
 
 type TableId =
@@ -18,6 +19,8 @@ pub type Partial(record) {
   End(List(record))
 }
 
+// TODO: Private and Protected should probably carry a subject.
+//       Or we should validate the owner and access before making a query.
 pub type Access {
   Public
   Protected
@@ -103,53 +106,45 @@ pub fn get(table: Table(index, record), index: index) -> Result(record, Nil) {
   ffi_get(table_id, index)
 }
 
-pub fn all(table: Table(index, record)) -> List(record) {
-  let query = query_record()
-  search(table, query)
+pub fn all(
+  from table: Table(index, record),
+  where queries: List(Query(index, record)),
+) -> List(x) {
+  let Table(table_id) = table
+
+  case queries {
+    [] -> ffi_search(table_id, [query.new()])
+    queries -> ffi_search(table_id, queries)
+  }
 }
 
-pub fn partial(table: Table(index, record), by limit: Int) -> Partial(record) {
-  let query = query_record()
-  search_partial(table, limit, query)
-}
+pub fn batch(
+  from table: Table(index, record),
+  by limit: Int,
+  where queries: List(Query(index, record)),
+) -> Partial(record) {
+  let Table(table_id) = table
 
-pub fn count(table: Table(index, record)) -> Int {
-  let query = query_count()
-  search_count(table, query)
+  case queries {
+    [] -> ffi_search_partial(table_id, limit, [query.new()])
+    queries -> ffi_search_partial(table_id, limit, queries)
+  }
 }
 
 pub fn continue(step: Step) -> Partial(x) {
   ffi_search_partial_continue(step)
 }
 
-// ------ Query Search API ------ //
-
-pub type MatchFunction
-
-pub fn search(
-  table: Table(index, record),
-  where expression: List(MatchFunction),
-) -> List(x) {
-  // Without matchspec ets:tab2list should be faster.
-  let Table(table_id) = table
-  ffi_search(table_id, expression)
-}
-
-pub fn search_partial(
-  table: Table(index, record),
-  by limit: Int,
-  where expression: List(MatchFunction),
-) -> Partial(x) {
-  let Table(table_id) = table
-  ffi_search_partial(table_id, limit, expression)
-}
-
-pub fn search_count(
-  table: Table(index, record),
-  where expression: List(MatchFunction),
+pub fn count(
+  from table: Table(index, record),
+  where queries: List(Query(index, record)),
 ) -> Int {
   let Table(table_id) = table
-  ffi_count(table_id, expression)
+
+  case queries {
+    [] -> ffi_count(table_id, [query.new()])
+    queries -> ffi_count(table_id, queries)
+  }
 }
 
 // ------ FFI Helpers ------ //
@@ -175,25 +170,17 @@ fn ffi_delete(table: TableId, index: index) -> Bool
 fn ffi_get(table: TableId, index: index) -> Result(record, Nil)
 
 @external(erlang, "lamb_erlang_ffi", "search")
-fn ffi_search(table: TableId, expression: List(MatchFunction)) -> List(record)
+fn ffi_search(table: TableId, query: List(Query(index, record))) -> List(x)
 
 @external(erlang, "lamb_erlang_ffi", "search")
 fn ffi_search_partial(
   table: TableId,
   limit: Int,
-  expression: List(MatchFunction),
+  query: List(Query(index, record)),
 ) -> Partial(x)
 
 @external(erlang, "lamb_erlang_ffi", "search")
 fn ffi_search_partial_continue(step: Step) -> Partial(x)
 
 @external(erlang, "lamb_erlang_ffi", "count")
-fn ffi_count(table: TableId, expression: List(MatchFunction)) -> Int
-
-// ------ FFI Queries ------ //
-
-@external(erlang, "lamb_erlang_queries_ffi", "query_count")
-fn query_count() -> List(MatchFunction)
-
-@external(erlang, "lamb_erlang_queries_ffi", "query_record")
-fn query_record() -> List(MatchFunction)
+fn ffi_count(table: TableId, query: List(Query(index, record))) -> Int
