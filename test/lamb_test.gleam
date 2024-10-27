@@ -1,4 +1,4 @@
-import artifacts/record.{Admin, User}
+import artifacts/record.{Admin, User, Client}
 import artifacts/setup
 import gleam/list
 import gleeunit
@@ -97,10 +97,17 @@ pub fn simple_query_test() {
       #("c", record.random(3)),
     ])
 
-    let assert Ok(_) = lamb.get(table, "a")
+    let assert Ok(a) = lamb.get(table, "a")
     let assert Ok(_) = lamb.get(table, "b")
     let assert Ok(_) = lamb.get(table, "c")
     let assert Error(_) = lamb.get(table, "d")
+
+    // just make sure that `a` is actually a type/record
+    case a {
+      Admin(..) -> Nil
+      User(..) -> Nil
+      Client(..) -> Nil
+    }
   })
 
   setup.table("retrieve all", fn(table) {
