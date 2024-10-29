@@ -1,4 +1,4 @@
-import artifacts/record.{Admin, User, Client}
+import artifacts/record.{Admin, Client, User}
 import artifacts/setup
 import gleam/list
 import gleeunit
