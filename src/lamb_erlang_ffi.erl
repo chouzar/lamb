@@ -1,18 +1,16 @@
 -module(lamb_erlang_ffi).
 
--export([create_table/2, table_id/1, get/2, search/1, search/2, search/3, count/2]).
+-export([create_table/3, table_id/1, get/2, search/1, search/3]).
 
-create_table(Access, Name) when is_atom(Access), is_atom(Name) ->
-    DefaultOptions = [set],
-
+create_table(Store, Access, Name) when is_atom(Access), is_atom(Name) ->
     Options =
         case Access of
             private ->
-                [private | DefaultOptions];
+                [Store, private];
             protected ->
-                [protected, named_table | DefaultOptions];
+                [Store, protected, named_table];
             public ->
-                [public, named_table | DefaultOptions]
+                [Store, public, named_table]
         end,
 
     ets:new(Name, Options).
@@ -37,9 +35,6 @@ search(Step) ->
     Result = ets:select(Step),
     partial_handle(Result).
 
-search(Step, MatchExpression) ->
-    ets:select(Step, MatchExpression).
-
 search(TableId, Limit, MatchExpression) ->
     Result = ets:select(TableId, MatchExpression, Limit),
     partial_handle(Result).
@@ -53,9 +48,3 @@ partial_handle(Result) ->
         '$end_of_table' ->
             {'end', []}
     end.
-
-count(TableId, MatchExpression) ->
-    NewMatchExpression =
-        lists:map(fun({Head, Conditions, _Body}) -> {Head, Conditions, [true]} end,
-                  MatchExpression),
-    ets:select_count(TableId, NewMatchExpression).

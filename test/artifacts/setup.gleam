@@ -1,11 +1,11 @@
 import artifacts/record
 import gleam/io
 import gleam/iterator
-import lamb.{type Table, Private}
+import lamb.{type Table, Private, Set}
 
 pub fn table(name: String, function: fn(Table(index, record)) -> x) -> Nil {
   // Initialization
-  let assert Ok(table) = lamb.create_table(Private, name)
+  let assert Ok(table) = lamb.create_table(Set, Private, name)
 
   io.print("\n")
   io.print("test: " <> name)
@@ -20,21 +20,24 @@ pub fn table(name: String, function: fn(Table(index, record)) -> x) -> Nil {
 }
 
 pub fn users_table(records quantity: Int) -> Table(Int, record.Record) {
-  let assert Ok(table) = lamb.create_table(Private, "test_users")
+  let assert Ok(table) = lamb.create_table(Set, Private, "test_users")
 
-  let enum =
+  let enums =
     iterator.from_list([0, 1, 2])
     |> iterator.cycle()
-    |> iterator.take(quantity)
 
-  let id = iterator.range(0, quantity)
+  let ids = iterator.range(1, quantity)
 
-  iterator.zip(enum, id)
-  |> iterator.each(fn(x) {
-    let #(enum, id) = x
-    let record = record.generate(enum, id)
-    lamb.insert(table, id, record)
-  })
+  iterator.map2(enums, ids, record.generate)
+  |> iterator.each(fn(record) { lamb.insert(table, [#(record.id, record)]) })
 
   table
 }
+
+pub fn dbg(term: term) -> term {
+  term |> display()
+  term
+}
+
+@external(erlang, "erlang", "display")
+fn display(term: term) -> term

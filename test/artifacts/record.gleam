@@ -15,10 +15,22 @@ pub fn random(id: Int) -> Record {
 
 pub fn generate(enum: Int, id: Int) -> Record {
   case enum {
-    0 -> User(id: id, name: gen_name(), age: gen_age(), bio: gen_bio())
-    1 -> Client(id: id, x: gen_location(), y: gen_location())
-    _ -> Admin(id: id)
+    0 -> generate_user(id)
+    1 -> generate_client(id)
+    _ -> generate_admin(id)
   }
+}
+
+pub fn generate_user(id: Int) -> Record {
+  User(id: id, name: gen_name(), age: gen_age(), bio: gen_bio())
+}
+
+pub fn generate_client(id: Int) -> Record {
+  Client(id: id, x: gen_location(), y: gen_location())
+}
+
+pub fn generate_admin(id: Int) -> Record {
+  Admin(id: id)
 }
 
 fn gen_name() -> String {

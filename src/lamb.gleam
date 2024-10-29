@@ -4,6 +4,9 @@ import lamb/query.{type Query}
 
 // ------ Table API ------ //
 
+// TODO: Make tables of different types. Set, OrderedSet, Bag, Duplicate Bag.
+// TODO: Think about enabling the heir option.
+// TODO: Think about enabling th give away option (which is independent from heir).
 pub opaque type Table(index, record) {
   Table(reference: TableId)
 }
@@ -14,9 +17,8 @@ type TableId =
 type Name =
   atom.Atom
 
-pub type Partial(record) {
-  Records(List(record), Step)
-  End(List(record))
+pub type Store {
+  Set
 }
 
 // TODO: Private and Protected should probably carry a subject.
@@ -28,6 +30,7 @@ pub type Access {
 }
 
 pub fn create_table(
+  store: Store,
   access: Access,
   name: String,
 ) -> Result(Table(index, record), Nil) {
@@ -36,14 +39,14 @@ pub fn create_table(
 
   case access {
     Private -> {
-      let table_id = ffi_create_table(access, name)
+      let table_id = ffi_create_table(store, access, name)
       Ok(Table(table_id))
     }
 
     Protected | Public -> {
       case ffi_table_id(name) {
         Ok(_table_id) -> Error(Nil)
-        Error(Nil) -> ffi_create_table(access, name) |> from_atom()
+        Error(Nil) -> ffi_create_table(store, access, name) |> from_atom()
       }
     }
   }
@@ -85,22 +88,59 @@ pub fn is_alive(table: Table(index, record)) -> Bool {
 
 // ------ Record API ------ //
 
-pub fn insert(table: Table(index, record), index: index, record: record) -> Nil {
+// TODO: When inserting, updating, deleting, querying. Check the table type and
+//       who is making the request, who the process owner is to validate that the
+//       query can be made.
+//
+//       Check if ets already gives us a useful type to work with.
+//
+// TODO: We can make all these operations work o lists. However the behaviour will
+//       need to be modified to guarantee insertion.
+//
+//       > If the list contains more than one object with matching keys and the table
+//       > type is set, one is inserted, which one is not defined. The same holds for
+//       > table type ordered_set if the keys compare equal.
+pub fn insert(table: Table(index, record), rows: List(#(index, record))) -> Nil {
   let Table(table_id) = table
-  let assert True = ffi_insert(table_id, #(index, record))
+  let assert True = ffi_insert(table_id, rows)
 
   Nil
 }
 
-pub fn delete(table: Table(index, record), index: index) -> Nil {
-  let Table(table_id) = table
-  let assert True = ffi_delete(table_id, index)
+pub fn update(
+  table: Table(index, record),
+  where query: Query(index, record),
+) -> Int {
+  // TODO: Consider these scenarios for bat tables:
+  //
+  // https://www.erlang.org/doc/apps/stdlib/ets.html#update_element/4
+  //
+  // >The function fails with reason badarg in the following situations:
+  // - The table type is not set or ordered_set.
+  // - The element to update is also the key.
 
-  Nil
+  //
+  // https://www.erlang.org/doc/apps/stdlib/ets.html#select_replace/2
+  //
+  // > For the moment, due to performance and semantic constraints, tables of type bag
+  // are not yet supported.
+  let Table(table_id) = table
+  ffi_update(table_id, [query])
+}
+
+pub fn delete(
+  table: Table(index, record),
+  where query: Query(index, record),
+) -> Int {
+  let Table(table_id) = table
+  ffi_delete(table_id, [query |> query.map(True)])
 }
 
 // ------ Query API ------ //
 
+// TODO: For tables of type bag, instead of doing a different module we could
+//       just do a runtime check before ther request. I think this could make
+//       the API way more ergonomic.
 pub fn get(table: Table(index, record), index: index) -> Result(record, Nil) {
   let Table(table_id) = table
   ffi_get(table_id, index)
@@ -108,27 +148,24 @@ pub fn get(table: Table(index, record), index: index) -> Result(record, Nil) {
 
 pub fn all(
   from table: Table(index, record),
-  where queries: List(Query(index, record)),
+  where query: Query(index, record),
 ) -> List(x) {
   let Table(table_id) = table
+  ffi_search(table_id, [query])
+}
 
-  case queries {
-    [] -> ffi_search(table_id, [query.new()])
-    queries -> ffi_search(table_id, queries)
-  }
+pub type Partial(record) {
+  Records(List(record), Step)
+  End(List(record))
 }
 
 pub fn batch(
   from table: Table(index, record),
   by limit: Int,
-  where queries: List(Query(index, record)),
-) -> Partial(record) {
+  where query: Query(index, record),
+) -> Partial(x) {
   let Table(table_id) = table
-
-  case queries {
-    [] -> ffi_search_partial(table_id, limit, [query.new()])
-    queries -> ffi_search_partial(table_id, limit, queries)
-  }
+  ffi_search_partial(table_id, limit, [query])
 }
 
 pub fn continue(step: Step) -> Partial(x) {
@@ -137,14 +174,10 @@ pub fn continue(step: Step) -> Partial(x) {
 
 pub fn count(
   from table: Table(index, record),
-  where queries: List(Query(index, record)),
+  where query: Query(index, record),
 ) -> Int {
   let Table(table_id) = table
-
-  case queries {
-    [] -> ffi_count(table_id, [query.new()])
-    queries -> ffi_count(table_id, queries)
-  }
+  ffi_count(table_id, [query |> query.map(True)])
 }
 
 // ------ FFI Helpers ------ //
@@ -155,32 +188,35 @@ pub type Step
 fn ffi_table_id(table: name_or_ref) -> Result(TableId, Nil)
 
 @external(erlang, "lamb_erlang_ffi", "create_table")
-fn ffi_create_table(access: Access, name: Name) -> name_or_ref
+fn ffi_create_table(store: Store, access: Access, name: Name) -> name_or_ref
 
 @external(erlang, "ets", "delete")
 fn ffi_delete_table(table: TableId) -> TableId
 
 @external(erlang, "ets", "insert")
-fn ffi_insert(table: TableId, record: record) -> Bool
+fn ffi_insert(table: TableId, rows: List(#(index, record))) -> Bool
 
-@external(erlang, "ets", "delete")
-fn ffi_delete(table: TableId, index: index) -> Bool
+@external(erlang, "ets", "select_replace")
+fn ffi_update(table: TableId, queries: List(Query(index, record))) -> Int
+
+@external(erlang, "ets", "select_delete")
+fn ffi_delete(table: TableId, queries: List(Query(index, record))) -> Int
 
 @external(erlang, "lamb_erlang_ffi", "get")
 fn ffi_get(table: TableId, index: index) -> Result(record, Nil)
 
-@external(erlang, "lamb_erlang_ffi", "search")
-fn ffi_search(table: TableId, query: List(Query(index, record))) -> List(x)
+@external(erlang, "ets", "select")
+fn ffi_search(table: TableId, queries: List(Query(index, record))) -> List(x)
 
 @external(erlang, "lamb_erlang_ffi", "search")
 fn ffi_search_partial(
   table: TableId,
   limit: Int,
-  query: List(Query(index, record)),
+  queries: List(Query(index, record)),
 ) -> Partial(x)
 
 @external(erlang, "lamb_erlang_ffi", "search")
 fn ffi_search_partial_continue(step: Step) -> Partial(x)
 
-@external(erlang, "lamb_erlang_ffi", "count")
-fn ffi_count(table: TableId, query: List(Query(index, record))) -> Int
+@external(erlang, "ets", "select_count")
+fn ffi_count(table: TableId, queries: List(Query(index, record))) -> Int

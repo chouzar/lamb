@@ -6,22 +6,40 @@
 A gleam library for operating and querying ETS tables.
 
 ```gleam
-import lamb
+import gleam/list
+import lamb.{Set, Private}
+import lamb/query.{v, i, a} as q
 
 pub fn main() {
-  let assert Ok(table) = lamb.create_table(Private, "test_table")
+  // Create a table and insert 5 records.
+  let assert Ok(table) = lamb.create_table(Set, Private, "test_table")
 
-  lamb.insert(table, "a", 1)
-  lamb.insert(table, "b", 2)
-  lamb.insert(table, "c", 3)
-  lamb.insert(table, "d", 4)
-  lamb.insert(table, "e", 5)
+  lamb.insert(table, [
+    #("a",  1),
+    #("b",  2),
+    #("c",  3),
+    #("d",  4),
+    #("e",  5),
+  ])
 
-  let assert Records([_, _] as a, step) = lamb.partial(table, by: 2)
+  // Retrieve just 1 record.
+  let assert Ok(3) = lamb.get(table, "c")
+
+  // This query syntax builds a matchspec to make queries on the table.
+  let query =
+    q.new()
+    |> q.bind(#(v(0), v(1)))
+
+  // Retrieve all rows but only return the record
+  let _records = lamb.all(table, query |> q.map(v(1)))
+
+  // Retrieve all rows but only return the record
+  let _records = lamb.all(table, query |> q.map(v(0)))
+
+  // Retrieve all records in batches of 2.
+  let assert Records([_, _] as a, step) = lamb.partial(table, by: 2, where: q.new())
   let assert Records([_, _] as b, step) = lamb.continue(step)
   let assert End([_] as c) = lamb.continue(step)
-
-  lamb.delete_table(table)
 }
 ```
 
