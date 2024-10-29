@@ -33,7 +33,7 @@ pub fn main() {
   // Retrieve all rows but only return the record
   let _records = lamb.all(table, query |> q.map(v(1)))
 
-  // Retrieve all rows but only return the record
+  // Retrieve all rows but only return the index
   let _records = lamb.all(table, query |> q.map(v(0)))
 
   // Retrieve all records in batches of 2.
