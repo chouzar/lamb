@@ -25,7 +25,7 @@ table_id(Table) ->
 
 get(TableId, Index) ->
     case ets:lookup(TableId, Index) of
-        [Record] ->
+        [{_, Record}] ->
             {ok, Record};
         [] ->
             {error, nil}
