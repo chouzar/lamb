@@ -28,11 +28,11 @@ pub fn map(
   with shape: shape,
 ) -> Query(index, record)
 
-pub fn i() -> Atom {
+pub fn ignore() -> Atom {
   atom.create_from_string("_")
 }
 
-pub fn v(at position: Int) -> Atom {
+pub fn var(at position: Int) -> Atom {
   case position {
     n if n >= 0 && n <= 100_000_000 ->
       atom.create_from_string("$" <> int.to_string(n))
@@ -41,7 +41,7 @@ pub fn v(at position: Int) -> Atom {
 }
 
 // TODO: Can these be made Head or Body specific?
-pub fn a(name: String) -> Atom {
+pub fn atom(name: String) -> Atom {
   atom.create_from_string(name)
 }
 
@@ -65,15 +65,15 @@ pub fn t5(a: a, b: b, c: c, d: d, e: e) {
   #(#(a, b, c, d, e))
 }
 
-pub fn r(name: String, tuple: tuple) -> x {
-  let tag = a(name)
+pub fn record(name: String, tuple: tuple) -> x {
+  let tag = atom(name)
   ffi_body_record(tag, tuple)
 }
 
 pub fn validate(
   query: Query(index, record),
 ) -> Result(Query(index, record), List(String)) {
-  case ffi_test_query(query, #(i())) {
+  case ffi_test_query(query, #(ignore())) {
     NoMatch -> Ok(query)
     Spec(_) -> Ok(query)
     Invalid(errors) -> Error(list.map(errors, charlist.to_string))

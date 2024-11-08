@@ -1,19 +1,11 @@
 -module(lamb_erlang_ffi).
 
--export([create_table/3, table_id/1, get/2, search/1, search/3]).
+-export([create_table/4, table_id/1, search/1, search/3]).
 
-create_table(Store, Access, Name) when is_atom(Access), is_atom(Name) ->
-    Options =
-        case Access of
-            private ->
-                [Store, private];
-            protected ->
-                [Store, protected, named_table];
-            public ->
-                [Store, public, named_table]
-        end,
-
-    ets:new(Name, Options).
+create_table(Name, Access, Kind, false) when is_atom(Name), is_atom(Access), is_atom(Kind) ->
+    ets:new(Name, [Access, Kind]);
+create_table(Name, Access, Kind, true) when is_atom(Name), is_atom(Access), is_atom(Kind) ->
+    ets:new(Name, [Access, Kind, named_table]).
 
 table_id(Table) ->
     case ets:info(Table, id) of
@@ -21,14 +13,6 @@ table_id(Table) ->
             {error, nil};
         TableId ->
             {ok, TableId}
-    end.
-
-get(TableId, Index) ->
-    case ets:lookup(TableId, Index) of
-        [{_, Record}] ->
-            {ok, Record};
-        [] ->
-            {error, nil}
     end.
 
 search(Step) ->
