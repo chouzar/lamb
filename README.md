@@ -8,38 +8,42 @@ A gleam library for operating and querying ETS tables.
 ```gleam
 import gleam/list
 import lamb.{Set, Private}
-import lamb/query.{v, i, a} as q
+import lamb/table.{Config, Private, Set}
+import lamb/record
+import lamb/query.{var, ignore, atom}
+
+type User {
+  User(name: String, age: Int, bio: String)
+}
 
 pub fn main() {
   // Create a table and insert 5 records.
-  let assert Ok(table) = lamb.create_table(Set, Private, "test_table")
+  let assert Ok(table) =
+    Config(name: "users", access: Private, kind: Set, registered: False)
+    |> table.create()
 
-  lamb.insert(table, [
-    #("a",  1),
-    #("b",  2),
-    #("c",  3),
-    #("d",  4),
-    #("e",  5),
-  ])
-
-  // Retrieve just 1 record.
-  let assert Ok(3) = lamb.get(table, "c")
+  lamb.insert(table, "00", User("Raúl", age: 35, bio: "While at friends gatherings, plays yugioh."))
+  lamb.insert(table, "01", User("César", age: 33, bio: "While outdoors, likes bird watching."))
+  lamb.insert(table, "02", User("Carlos", age: 30, bio: "Always craving for coffee."))
+  lamb.insert(table, "10", User("Adrián", age: 26, bio: "Simply exists."))
 
   // This query syntax builds a matchspec to make queries on the table.
   let query =
     q.new()
-    |> q.bind(#(v(0), v(1)))
+    |> q.bind(#(var(0), var(1)))
 
   // Retrieve all rows but only return the record
-  let _records = lamb.all(table, query |> q.map(v(1)))
+  let query_records = query |> q.map(var(1))
+  let _records = lamb.all(table, query_records)
 
   // Retrieve all rows but only return the index
-  let _records = lamb.all(table, query |> q.map(v(0)))
+  let query_indexes = query |> q.map(var(0))
+  let _indexes = lamb.all(table, query_indexes)
 
   // Retrieve all records in batches of 2.
   let assert Records([_, _] as a, step) = lamb.partial(table, by: 2, where: q.new())
   let assert Records([_, _] as b, step) = lamb.continue(step)
-  let assert End([_] as c) = lamb.continue(step)
+  let assert End([User(_, _, _, _)] as c) = lamb.continue(step)
 }
 ```
 
