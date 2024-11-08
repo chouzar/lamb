@@ -1,9 +1,11 @@
-import artifacts/record.{Admin, Client, User}
 import artifacts/setup
+import artifacts/user.{Admin, User}
 import gleam/list
 import gleeunit
-import lamb.{End, Private, Protected, Public, Records, Set}
-import lamb/query.{a, i, t2, v} as q
+import lamb.{End, Records}
+import lamb/query.{atom, ignore, var} as q
+import lamb/record
+import lamb/table.{Config, Private, Set}
 
 pub fn main() {
   gleeunit.main()
@@ -11,118 +13,74 @@ pub fn main() {
 
 pub fn table_test() {
   // Able to create a private table
-  let assert Ok(t0) = lamb.create_table(Set, Private, "test_table")
-  let assert True = lamb.is_alive(t0)
+  let assert Ok(t0) = table.create(Config("test_table", Private, Set, False))
+  let assert True = table.is_alive(t0)
 
   // Able to create a private table with same name
-  let assert Ok(t1) = lamb.create_table(Set, Private, "test_table")
-  let assert True = lamb.is_alive(t1)
+  let assert Ok(t1) = table.create(Config("test_table", Private, Set, False))
+  let assert True = table.is_alive(t1)
 
-  // Able to create a protected table
-  let assert Ok(t2) = lamb.create_table(Set, Protected, "test_table")
-  let assert True = lamb.is_alive(t2)
+  // Able to create a registered table
+  let assert Ok(t2) = table.create(Config("test_table", Private, Set, True))
+  let assert True = table.is_alive(t2)
 
-  // Unable to create a public table with same name
-  let assert Error(_) = lamb.create_table(Set, Public, "test_table")
+  // Unable to create a registered table with same name
+  let assert Error(_) = table.create(Config("test_table", Private, Set, True))
 
   // Able to retrieve a table by name
-  let assert Ok(_) = lamb.from_name("test_table")
+  let assert Ok(_) = table.from_name("test_table")
 
   // Able to delete a table
-  lamb.delete_table(t0)
-  let assert False = lamb.is_alive(t0)
+  table.delete(t0)
+  let assert False = table.is_alive(t0)
 
-  lamb.delete_table(t1)
-  let assert False = lamb.is_alive(t1)
+  table.delete(t1)
+  let assert False = table.is_alive(t1)
 
-  lamb.delete_table(t2)
-  let assert False = lamb.is_alive(t2)
-  let assert Error(_) = lamb.from_name("test_table")
+  table.delete(t2)
+  let assert False = table.is_alive(t2)
+  let assert Error(_) = table.from_name("test_table")
 }
 
 pub fn record_test() {
   setup.table("insert records", fn(table) {
     let assert [] = lamb.all(table, q.new())
 
-    lamb.insert(table, [#("a", record.random(1))])
+    record.insert(table, "a", user.random(1))
     let assert [_] = lamb.all(table, q.new())
 
-    lamb.insert(table, [#("b", record.random(2))])
+    record.insert(table, "b", user.random(2))
     let assert [_, _] = lamb.all(table, q.new())
 
-    lamb.insert(table, [#("c", record.random(3))])
+    record.insert(table, "c", user.random(3))
     let assert [_, _, _] = lamb.all(table, q.new())
-  })
-
-  setup.table("update records", fn(table) {
-    lamb.insert(table, [
-      #("a", record.generate_user(1)),
-      #("b", record.generate_user(2)),
-      #("c", record.generate_user(3)),
-    ])
-
-    let assert [User(_, _, _, _), User(_, _, _, _), User(_, _, _, _)] =
-      lamb.all(table, q.new())
-
-    let query =
-      q.new()
-      |> q.bind(#(v(0), #(a("user"), v(1), i(), i(), i())))
-      |> q.map(#(v(0), t2(a("admin"), v(1))))
-
-    let assert 3 = lamb.update(table, query)
-    let assert [Admin(_), Admin(_), Admin(_)] = lamb.all(table, q.new())
   })
 
   setup.table("delete records", fn(table) {
     let assert [] = lamb.all(table, q.new())
 
-    lamb.insert(table, [
-      #("a", record.random(1)),
-      #("b", record.random(2)),
-      #("c", record.random(3)),
-    ])
+    record.insert(table, "a", user.random(1))
+    record.insert(table, "b", user.random(2))
+    record.insert(table, "c", user.random(3))
 
-    let assert 3 = lamb.delete(table, q.new())
+    let assert 3 = record.erase(table, q.new())
     let assert [] = lamb.all(table, q.new())
   })
 }
 
 pub fn simple_query_test() {
-  setup.table("get", fn(table) {
-    let assert Error(_) = lamb.get(table, "a")
-
-    lamb.insert(table, [
-      #("a", record.random(1)),
-      #("b", record.random(2)),
-      #("c", record.random(3)),
-    ])
-
-    let assert Ok(a) = lamb.get(table, "a")
-    let assert Ok(_) = lamb.get(table, "b")
-    let assert Ok(_) = lamb.get(table, "c")
-    let assert Error(_) = lamb.get(table, "d")
-
-    // just make sure that `a` is actually a type/record
-    case a {
-      Admin(..) -> Nil
-      User(..) -> Nil
-      Client(..) -> Nil
-    }
-  })
-
   setup.table("retrieve all", fn(table) {
-    lamb.insert(table, [#("a", Admin(1)), #("b", Admin(2))])
+    record.insert(table, "a", Admin(1))
+    record.insert(table, "b", Admin(2))
     let assert [Admin(_), Admin(_)] = lamb.all(table, q.new())
   })
 
   setup.table("retrieve partial", fn(table) {
-    lamb.insert(table, [
-      #("a", Admin(id: 1)),
-      #("b", Admin(id: 2)),
-      #("c", Admin(id: 3)),
-      #("d", Admin(id: 4)),
-      #("e", Admin(id: 5)),
-    ])
+    record.insert(table, "a", Admin(id: 1))
+    record.insert(table, "b", Admin(id: 2))
+    record.insert(table, "c", Admin(id: 3))
+    record.insert(table, "d", Admin(id: 4))
+    record.insert(table, "e", Admin(id: 5))
 
     let assert Records([_, _] as a, step) = lamb.batch(table, 2, q.new())
     let assert Records([_, _] as b, step) = lamb.continue(step)
@@ -133,13 +91,11 @@ pub fn simple_query_test() {
   })
 
   setup.table("count", fn(table) {
-    lamb.insert(table, [
-      #("a", Admin(id: 1)),
-      #("b", Admin(id: 2)),
-      #("c", Admin(id: 3)),
-      #("d", Admin(id: 4)),
-      #("e", Admin(id: 5)),
-    ])
+    record.insert(table, "a", Admin(id: 1))
+    record.insert(table, "b", Admin(id: 2))
+    record.insert(table, "c", Admin(id: 3))
+    record.insert(table, "d", Admin(id: 4))
+    record.insert(table, "e", Admin(id: 5))
 
     let assert 5 = lamb.count(table, q.new())
   })
@@ -147,12 +103,16 @@ pub fn simple_query_test() {
 
 pub fn complex_query_test() {
   setup.table("test", fn(table) {
-    lamb.insert(table, [#("a", 1), #("b", 2), #("c", 3), #("d", 4), #("e", 5)])
+    record.insert(table, "a", 1)
+    record.insert(table, "b", 2)
+    record.insert(table, "c", 3)
+    record.insert(table, "d", 4)
+    record.insert(table, "e", 5)
 
     let assert ["c"] =
       q.new()
-      |> q.bind(#(v(0), 3))
-      |> q.map(v(0))
+      |> q.bind(#(var(0), 3))
+      |> q.map(var(0))
       |> lamb.all(table, _)
   })
 }
@@ -165,13 +125,13 @@ pub fn debugging_test() {
 
   let assert Ok(_query) =
     q.new()
-    |> q.bind(#(v(0), v(1), i(), a("test")))
-    |> q.map(#(a("test"), v(1), v(0)))
+    |> q.bind(#(var(0), var(1), ignore(), atom("test")))
+    |> q.map(#(atom("test"), var(1), var(0)))
     |> q.validate()
 
   let assert Error(_query) =
     q.new()
-    |> q.map(#(v(100)))
+    |> q.map(#(var(100)))
     |> q.validate()
 
   // Against
@@ -181,14 +141,14 @@ pub fn debugging_test() {
 
   let assert Ok(_query) =
     q.new()
-    |> q.bind(#(a("user"), i(), "Raúl", v(0), i()))
-    |> q.map(v(0))
+    |> q.bind(#(atom("user"), ignore(), "Raúl", var(0), ignore()))
+    |> q.map(var(0))
     |> q.against(User(1, "Raúl", 35, ""))
 
   let assert Error(_query) =
     q.new()
-    |> q.bind(#(a("user"), i(), "Raúl", v(0), i()))
-    |> q.map(v(0))
+    |> q.bind(#(atom("user"), ignore(), "Raúl", var(0), ignore()))
+    |> q.map(var(0))
     |> q.against(User(1, "Carlos", 30, ""))
 }
 
@@ -209,7 +169,7 @@ pub fn parse_tranform_query_test() {
     > lamb.all(table, when_name(is: "Raúl"))
     |> list.length()
 
-  lamb.delete_table(table)
+  table.delete(table)
 }
 
 @external(erlang, "artifacts_queries_ffi", "query_user")
