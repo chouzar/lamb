@@ -7,10 +7,8 @@ A gleam library for operating and querying ETS tables.
 
 ```gleam
 import gleam/list
-import lamb.{Set, Private}
-import lamb/table.{Config, Private, Set}
-import lamb/record
-import lamb/query.{var, ignore, atom}
+import lamb.{Config, Set, Private}
+import lamb/query as q
 
 type User {
   User(name: String, age: Int, bio: String)
@@ -20,27 +18,25 @@ pub fn main() {
   // Create a table and insert 5 records.
   let assert Ok(table) =
     Config(name: "users", access: Private, kind: Set, registered: False)
-    |> table.create()
+    |> lamb.create()
 
   lamb.insert(table, "00", User("Raúl", age: 35, bio: "While at friends gatherings, plays yugioh."))
   lamb.insert(table, "01", User("César", age: 33, bio: "While outdoors, likes bird watching."))
   lamb.insert(table, "02", User("Carlos", age: 30, bio: "Always craving for coffee."))
   lamb.insert(table, "10", User("Adrián", age: 26, bio: "Simply exists."))
 
-  // This query syntax builds a matchspec to make queries on the table.
+  // Retrieve all User records.
+  let _records = lamb.all(table, q.new())
+
+  // Retrieve all User ids.
   let query =
-    q.new()
-    |> q.bind(#(var(0), var(1)))
+    query
+    |> q.bind3(User)
+    |> q.map(fn(index, _name, _age, _bio) { index })
 
-  // Retrieve all rows but only return the record
-  let query_records = query |> q.map(var(1))
-  let _records = lamb.all(table, query_records)
+  let _ids = lamb.all(table, query)
 
-  // Retrieve all rows but only return the index
-  let query_indexes = query |> q.map(var(0))
-  let _indexes = lamb.all(table, query_indexes)
-
-  // Retrieve all records in batches of 2.
+  // Retrieve all User records in batches of 2.
   let assert Records([_, _] as a, step) = lamb.partial(table, by: 2, where: q.new())
   let assert Records([_, _] as b, step) = lamb.continue(step)
   let assert End([User(_, _, _, _)] as c) = lamb.continue(step)
@@ -58,9 +54,9 @@ gleam test  # Run the tests
 
 ---
 
-Work in progress notes.
+# Work in progress notes.
 
-# Table API
+## Table API
 
 Currently viewing the table creating in terms of protection levels:
   - `Private`, private table, not named.
@@ -79,7 +75,7 @@ pub fn options() -> Options {
 
 Still need to figure out what is going to be the API for differentiating between `set` and `bag` tables.
 
-# Query API
+## Query API
 
 Matchspecs are composed by a Tuple of arity 3 called a `MatchFunction`:
 
@@ -93,7 +89,7 @@ Matchspecs are composed by a Tuple of arity 3 called a `MatchFunction`:
 
 Operating on these 3 pieces may be tackled in different ways.
 
-## Alternative 1
+### Alternative 1
 
 Have an API that composes matchspecs together with a builder pattern:
 
@@ -114,7 +110,7 @@ query |> q.select(fn(last, first) {        // Alternative mapper to above.
 })
 ```
 
-## Alternative 2
+### Alternative 2
 
 Build a "nice" parser to compose complex queries:
 
@@ -129,7 +125,7 @@ let query = "
 "
 ```
 
-## Alternative 3
+### Alternative 3
 
 Just build a more straightforward mapper for matchspecs.
 
@@ -141,7 +137,7 @@ let query_driver_elegibility = #(head, [condition], [body])
 lamb.search(table, [query_driver_elegibility])
 ```
 
-## Notes on types and validation
+### Notes on types and validation
 
 None of these alternatives currently provide a good way of enforcing types but are meant to fail gracefully if
 there are errors. Querying so far is a "dynamic" operation.
@@ -152,7 +148,7 @@ be quite a big lift for my current purposes.
 Maybe another way is to provide a validator at init time, but this would exclusively check the validity of the
 matchspecs.
 
-# Checkout these ETS APIs
+## Checkout these ETS APIs
 
 * https://www.erlang.org/doc/apps/stdlib/ets.html#select_delete/2
 * https://www.erlang.org/doc/apps/stdlib/ets.html#fun2ms/1
