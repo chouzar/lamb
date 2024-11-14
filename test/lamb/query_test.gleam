@@ -3,8 +3,6 @@ import artifacts/user.{Admin, User}
 import gleeunit
 import lamb
 import lamb/query as q
-import lamb/query/term as t
-import lamb/record
 
 pub fn main() {
   gleeunit.main()
@@ -12,26 +10,26 @@ pub fn main() {
 
 pub fn complex_query_test() {
   setup.table("test", fn(table) {
-    record.insert(table, "a", Admin(id: 1))
-    record.insert(table, "b", Admin(id: 2))
-    record.insert(table, "c", Admin(id: 3))
-    record.insert(table, "d", Admin(id: 4))
-    record.insert(table, "e", Admin(id: 5))
+    lamb.insert(table, "a", Admin(id: 1))
+    lamb.insert(table, "b", Admin(id: 2))
+    lamb.insert(table, "c", Admin(id: 3))
+    lamb.insert(table, "d", Admin(id: 4))
+    lamb.insert(table, "e", Admin(id: 5))
 
     let assert ["c"] =
       q.new()
       |> q.bind0(fn() { Admin(3) })
-      |> q.map(t.var(0))
+      |> q.map0(fn(index) { index })
       |> lamb.all(table, _)
   })
 
   setup.table("test", fn(table) {
-    record.insert(table, "a", user.generate_admin(1))
-    record.insert(table, "b", user.generate_guest(2))
-    record.insert(table, "c", user.generate_guest(3))
-    record.insert(table, "d", user.generate_user(4))
-    record.insert(table, "e", user.generate_user(5))
-    record.insert(table, "f", user.generate_user(6))
+    lamb.insert(table, "a", user.generate_admin(1))
+    lamb.insert(table, "b", user.generate_guest(2))
+    lamb.insert(table, "c", user.generate_guest(3))
+    lamb.insert(table, "d", user.generate_user(4))
+    lamb.insert(table, "e", user.generate_user(5))
+    lamb.insert(table, "f", user.generate_user(6))
 
     q.new()
     |> q.bind4(User)

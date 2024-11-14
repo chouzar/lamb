@@ -1,6 +1,7 @@
+import gleam/erlang/atom.{type Atom}
 import gleam/erlang/charlist.{type Charlist}
+import gleam/int
 import gleam/list
-import lamb/query/term
 
 pub type Query(index, record, binding)
 
@@ -81,7 +82,7 @@ fn bind(query, constructor) {
   let shape = ffi_build_matchhead(constructor)
 
   query
-  |> ffi_update_head(#(term.var(0), shape))
+  |> ffi_update_head(#(var(0), shape))
   |> ffi_update_body(shape)
 }
 
@@ -165,17 +166,16 @@ pub fn map9(
   query |> ffi_update_body(shape)
 }
 
-pub fn map(
-  query: Query(index, record, binding),
-  with shape: shape,
-) -> Query(index, record, shape) {
-  query |> ffi_update_body(shape)
+type Test(body) {
+  NoMatch
+  Spec(body)
+  Invalid(List(Charlist))
 }
 
 pub fn validate(
   query: Query(index, record, binding),
 ) -> Result(Query(index, record, binding), List(String)) {
-  case ffi_test_query(query, #(term.ignore())) {
+  case ffi_test_query(query, #(ignore())) {
     NoMatch -> Ok(query)
     Spec(_) -> Ok(query)
     Invalid(errors) -> Error(list.map(errors, charlist.to_string))
@@ -193,10 +193,16 @@ pub fn against(
   }
 }
 
-type Test(body) {
-  NoMatch
-  Spec(body)
-  Invalid(List(Charlist))
+fn ignore() -> Atom {
+  atom.create_from_string("_")
+}
+
+pub fn var(at position: Int) -> Atom {
+  case position {
+    n if n >= 0 && n <= 100_000_000 ->
+      atom.create_from_string("$" <> int.to_string(n))
+    _other -> panic as "can only specify a variable between 0 and 100_000_000"
+  }
 }
 
 @external(erlang, "lamb_query_erlang_ffi", "update_head")
