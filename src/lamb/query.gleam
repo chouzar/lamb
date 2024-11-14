@@ -188,6 +188,10 @@ fn ffi_build_matchbody(constructor: constructor) -> record
 
 // --- Test API --- //
 
+// TODO: For better experience it would be nice to validate queries at runtime.
+// * On error, fail gracefully but log-out a message.
+// * Then the test API will likely not be needed.
+
 type Test(body) {
   NoMatch
   Spec(body)
@@ -207,11 +211,11 @@ pub fn validate(
 pub fn against(
   query: Query(index, record, binding),
   row: row,
-) -> Result(shape, Nil) {
+) -> Result(shape, List(String)) {
   case ffi_test_query(query, row) {
-    NoMatch -> Error(Nil)
+    NoMatch -> Error(["no match"])
     Spec(shape) -> Ok(shape)
-    Invalid(_errors) -> Error(Nil)
+    Invalid(errors) -> Error(list.map(errors, charlist.to_string))
   }
 }
 

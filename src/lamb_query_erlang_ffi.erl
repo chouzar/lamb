@@ -18,9 +18,8 @@ update_body({Head, Conditions, _Body}, NewBody) ->
     {Head, Conditions, [wrap_tuple(NewBody)]}.
 
 % TODO: The traversal algorithm needs more basic datastructures.
-% - Rename top function to traversal and localize wrap tuple. 
+% - Rename top function to traversal and localize wrap tuple.
 % - Will need a stronger test-suite, to understand what is allowed.
-% - Will need to validate queries. On error, fail gracefully but log-out a message.  
 wrap_tuple(Data) when is_tuple(Data) ->
     % When a tuple is found, traverse and wrap in tuple {}
     NewData = traverse(Data, 0, tuple_size(Data)),

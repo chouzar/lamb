@@ -1,5 +1,6 @@
 import artifacts/setup
 import artifacts/user.{Admin, User}
+import gleam/erlang/atom.{type Atom}
 import gleeunit
 import lamb
 import lamb/query as q
@@ -37,40 +38,38 @@ pub fn complex_query_test() {
     |> lamb.all(table, _)
   })
 }
-// pub fn debugging_test() {
-//   // Default query should pass
-//   let assert Ok(_query) =
-//     q.new()
-//     |> q.validate()
-//
-//   // Should pass when requesting index and var '$1'
-//   let assert Ok(_query) =
-//     q.new()
-//     |> q.bind1(Admin)
-//     |> q.map(#("data", t.var(1), t.var(0)))
-//     |> q.validate()
-//
-//   // Errors when non-bound variable is mapped
-//   let assert Error(_query) =
-//     q.new()
-//     |> q.map(#(t.var(100)))
-//     |> q.validate()
-//
-//   // Against
-//   let assert Ok(_query) =
-//     q.new()
-//     |> q.against(#(1, "Value"))
-//
-//   let assert Ok(_query) =
-//     q.new()
-//     |> q.bind(#(t.atom("user"), t.ignore(), "Raúl", t.var(0), t.ignore()))
-//     |> q.map(t.var(0))
-//     |> q.against(User(1, "Raúl", 35, ""))
-//
-//   let assert Error(_query) =
-//     q.new()
-//     |> q.bind(#(t.atom("user"), t.ignore(), "Raúl", t.var(0), t.ignore()))
-//     |> q.map(t.var(0))
-//     |> q.against(User(1, "Carlos", 30, ""))
-// }
-//
+
+pub fn debugging_test() {
+  // Default query should pass
+  let assert Ok(_query) =
+    q.new()
+    |> q.validate()
+
+  // Should pass when requesting index and var '$1'
+  let assert Ok(_query) =
+    q.new()
+    |> q.bind1(Admin)
+    |> q.map1(fn(index, id) { #("data", id, index) })
+    |> q.validate()
+
+  // Against
+  let assert Ok(_query) =
+    q.new()
+    |> q.against(#(1, "Value"))
+
+  let assert Ok(_query) =
+    q.new()
+    |> q.bind1(fn(age) { User(1, "Raúl", age, "bird watching") })
+    |> q.map1(fn(_index, age) { age })
+    |> q.against(#(a("$0"), User(1, "Raúl", 35, "bird watching")))
+
+  let assert Error(_query) =
+    q.new()
+    |> q.bind1(fn(age) { User(1, "Raúl", age, "bird watching") })
+    |> q.map1(fn(index, _age) { index })
+    |> q.against(#(a("$0"), User(1, "Carlos", 35, "")))
+}
+
+fn a(name: String) -> Atom {
+  atom.create_from_string(name)
+}
