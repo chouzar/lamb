@@ -4,7 +4,7 @@ import gleam/list
 
 pub type User {
   User(id: Int, name: String, age: Int, bio: String)
-  Client(id: Int, x: Float, y: Float)
+  Guest(id: Int, x: Float, y: Float)
   Admin(id: Int)
 }
 
@@ -16,7 +16,7 @@ pub fn random(id: Int) -> User {
 pub fn generate(enum: Int, id: Int) -> User {
   case enum {
     0 -> generate_user(id)
-    1 -> generate_client(id)
+    1 -> generate_guest(id)
     _ -> generate_admin(id)
   }
 }
@@ -25,8 +25,8 @@ pub fn generate_user(id: Int) -> User {
   User(id: id, name: gen_name(), age: gen_age(), bio: gen_bio())
 }
 
-pub fn generate_client(id: Int) -> User {
-  Client(id: id, x: gen_location(), y: gen_location())
+pub fn generate_guest(id: Int) -> User {
+  Guest(id: id, x: gen_location(), y: gen_location())
 }
 
 pub fn generate_admin(id: Int) -> User {

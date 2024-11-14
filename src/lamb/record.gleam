@@ -19,9 +19,10 @@ pub fn insert(table: Table(index, record), index: index, record: record) -> Nil 
 
 pub fn erase(
   table: Table(index, record),
-  where query: Query(index, record),
+  where query: Query(index, record, binding),
 ) -> Int {
   let table_id = table.reference
+  query |> query.map(True)
   ffi_select_delete(table_id, [query |> query.map(True)])
 }
 
@@ -29,4 +30,7 @@ pub fn erase(
 fn ffi_insert(table: TableId, rows: List(#(index, record))) -> Bool
 
 @external(erlang, "ets", "select_delete")
-fn ffi_select_delete(table: TableId, queries: List(Query(index, record))) -> Int
+fn ffi_select_delete(
+  table: TableId,
+  queries: List(Query(index, record, binding)),
+) -> Int

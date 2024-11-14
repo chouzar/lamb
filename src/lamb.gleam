@@ -9,7 +9,7 @@ pub type Partial(record) {
 
 pub fn all(
   from table: Table(index, record),
-  where query: Query(index, record),
+  where query: Query(index, record, binding),
 ) -> List(x) {
   let table_id = table.reference
   ffi_select(table_id, [query])
@@ -18,7 +18,7 @@ pub fn all(
 pub fn batch(
   from table: Table(index, record),
   by limit: Int,
-  where query: Query(index, record),
+  where query: Query(index, record, binding),
 ) -> Partial(x) {
   let table_id = table.reference
   ffi_search_partial(table_id, limit, [query])
@@ -30,7 +30,7 @@ pub fn continue(step: Step) -> Partial(x) {
 
 pub fn count(
   from table: Table(index, record),
-  where query: Query(index, record),
+  where query: Query(index, record, binding),
 ) -> Int {
   let table_id = table.reference
   ffi_select_count(table_id, [query |> query.map(True)])
@@ -44,16 +44,22 @@ type TableId =
   erlang.Reference
 
 @external(erlang, "ets", "select")
-fn ffi_select(table: TableId, queries: List(Query(index, record))) -> List(x)
+fn ffi_select(
+  table: TableId,
+  queries: List(Query(index, record, binding)),
+) -> List(x)
 
 @external(erlang, "ets", "select_count")
-fn ffi_select_count(table: TableId, queries: List(Query(index, record))) -> Int
+fn ffi_select_count(
+  table: TableId,
+  queries: List(Query(index, record, binding)),
+) -> Int
 
 @external(erlang, "lamb_erlang_ffi", "search")
 fn ffi_search_partial(
   table: TableId,
   limit: Int,
-  queries: List(Query(index, record)),
+  queries: List(Query(index, record, binding)),
 ) -> Partial(x)
 
 @external(erlang, "lamb_erlang_ffi", "search")

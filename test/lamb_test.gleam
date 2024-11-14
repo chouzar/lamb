@@ -1,9 +1,9 @@
 import artifacts/setup
-import artifacts/user.{Admin, User}
+import artifacts/user.{Admin, Guest, User}
 import gleam/list
 import gleeunit
 import lamb.{End, Records}
-import lamb/query.{atom, ignore, var} as q
+import lamb/query as q
 import lamb/record
 import lamb/table.{Config, Private, Set}
 
@@ -91,63 +91,17 @@ pub fn simple_query_test() {
   })
 
   setup.table("count", fn(table) {
-    record.insert(table, "a", Admin(id: 1))
-    record.insert(table, "b", Admin(id: 2))
-    record.insert(table, "c", Admin(id: 3))
-    record.insert(table, "d", Admin(id: 4))
-    record.insert(table, "e", Admin(id: 5))
+    record.insert(table, "a", user.generate_admin(1))
+    record.insert(table, "b", user.generate_guest(2))
+    record.insert(table, "c", user.generate_guest(3))
+    record.insert(table, "d", user.generate_user(4))
+    record.insert(table, "e", user.generate_user(5))
+    record.insert(table, "f", user.generate_user(6))
 
-    let assert 5 = lamb.count(table, q.new())
+    let assert 6 = lamb.count(table, q.new())
+
+    let assert 1 = lamb.count(table, q.new() |> q.bind1(Admin))
+    let assert 2 = lamb.count(table, q.new() |> q.bind3(Guest))
+    let assert 3 = lamb.count(table, q.new() |> q.bind4(User))
   })
-}
-
-pub fn complex_query_test() {
-  setup.table("test", fn(table) {
-    record.insert(table, "a", 1)
-    record.insert(table, "b", 2)
-    record.insert(table, "c", 3)
-    record.insert(table, "d", 4)
-    record.insert(table, "e", 5)
-
-    let assert ["c"] =
-      q.new()
-      |> q.bind(#(var(0), 3))
-      |> q.map(var(0))
-      |> lamb.all(table, _)
-  })
-}
-
-pub fn debugging_test() {
-  // Validate
-  let assert Ok(_query) =
-    q.new()
-    |> q.validate()
-
-  let assert Ok(_query) =
-    q.new()
-    |> q.bind(#(var(0), var(1), ignore(), atom("test")))
-    |> q.map(#(atom("test"), var(1), var(0)))
-    |> q.validate()
-
-  let assert Error(_query) =
-    q.new()
-    |> q.map(#(var(100)))
-    |> q.validate()
-
-  // Against
-  let assert Ok(_query) =
-    q.new()
-    |> q.against(#(1, "Value"))
-
-  let assert Ok(_query) =
-    q.new()
-    |> q.bind(#(atom("user"), ignore(), "Raúl", var(0), ignore()))
-    |> q.map(var(0))
-    |> q.against(User(1, "Raúl", 35, ""))
-
-  let assert Error(_query) =
-    q.new()
-    |> q.bind(#(atom("user"), ignore(), "Raúl", var(0), ignore()))
-    |> q.map(var(0))
-    |> q.against(User(1, "Carlos", 30, ""))
 }
