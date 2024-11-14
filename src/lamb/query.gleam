@@ -3,6 +3,8 @@ import gleam/erlang/charlist.{type Charlist}
 import gleam/int
 import gleam/list
 
+// --- MatchSpec API --- //
+
 pub type Query(index, record, binding)
 
 @external(erlang, "lamb_query_erlang_ffi", "new")
@@ -166,6 +168,26 @@ pub fn map9(
   query |> ffi_update_body(shape)
 }
 
+@external(erlang, "lamb_query_erlang_ffi", "update_head")
+fn ffi_update_head(
+  query: Query(index, record, binding),
+  with shape: shape,
+) -> Query(index, record, binding)
+
+@external(erlang, "lamb_query_erlang_ffi", "update_body")
+fn ffi_update_body(
+  query: Query(index, record, binding),
+  with shape: shape,
+) -> Query(index, record, x)
+
+@external(erlang, "lamb_query_erlang_ffi", "build_matchhead")
+fn ffi_build_matchhead(constructor: constructor) -> record
+
+@external(erlang, "lamb_query_erlang_ffi", "build_matchbody")
+fn ffi_build_matchbody(constructor: constructor) -> record
+
+// --- Test API --- //
+
 type Test(body) {
   NoMatch
   Spec(body)
@@ -204,24 +226,6 @@ pub fn var(at position: Int) -> Atom {
     _other -> panic as "can only specify a variable between 0 and 100_000_000"
   }
 }
-
-@external(erlang, "lamb_query_erlang_ffi", "update_head")
-fn ffi_update_head(
-  query: Query(index, record, binding),
-  with shape: shape,
-) -> Query(index, record, binding)
-
-@external(erlang, "lamb_query_erlang_ffi", "update_body")
-fn ffi_update_body(
-  query: Query(index, record, binding),
-  with shape: shape,
-) -> Query(index, record, x)
-
-@external(erlang, "lamb_query_erlang_ffi", "build_matchhead")
-fn ffi_build_matchhead(constructor: constructor) -> record
-
-@external(erlang, "lamb_query_erlang_ffi", "build_matchbody")
-fn ffi_build_matchbody(constructor: constructor) -> record
 
 @external(erlang, "lamb_query_erlang_ffi", "test_query")
 fn ffi_test_query(query: Query(index, record, binding), row: row) -> Test(body)
