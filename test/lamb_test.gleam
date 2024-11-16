@@ -2,7 +2,7 @@ import artifacts/setup
 import artifacts/user.{Admin, Guest, User}
 import gleam/list
 import gleeunit
-import lamb.{Config, End, Private, Records, Set}
+import lamb.{End, Private, Records, Set}
 import lamb/query as q
 
 pub fn main() {
@@ -11,19 +11,19 @@ pub fn main() {
 
 pub fn table_test() {
   // Able to create a private table
-  let assert Ok(t0) = lamb.create(Config("test_table", Private, Set, False))
+  let assert Ok(t0) = lamb.create("test_table", Private, Set, False)
   let assert True = lamb.is_alive(t0)
 
   // Able to create a private table with same name
-  let assert Ok(t1) = lamb.create(Config("test_table", Private, Set, False))
+  let assert Ok(t1) = lamb.create("test_table", Private, Set, False)
   let assert True = lamb.is_alive(t1)
 
   // Able to create a registered table
-  let assert Ok(t2) = lamb.create(Config("test_table", Private, Set, True))
+  let assert Ok(t2) = lamb.create("test_table", Private, Set, True)
   let assert True = lamb.is_alive(t2)
 
   // Unable to create a registered table with same name
-  let assert Error(_) = lamb.create(Config("test_table", Private, Set, True))
+  let assert Error(_) = lamb.create("test_table", Private, Set, True)
 
   // Able to retrieve a table by name
   let assert Ok(_) = lamb.from_name("test_table")

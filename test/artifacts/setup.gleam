@@ -1,13 +1,12 @@
 import artifacts/user
 import gleam/io
 import gleam/iterator
-import lamb.{type Table, Config, Private, Set}
+import lamb.{type Table, Private, Set}
 
 pub fn table(name: String, function: fn(Table(index, record)) -> x) -> Nil {
   // Initialization
   let assert Ok(table) =
-    Config(name: name, access: Private, kind: Set, registered: False)
-    |> lamb.create()
+    lamb.create(name: name, access: Private, kind: Set, registered: False)
 
   io.print("\n")
   io.print("test: " <> name)
@@ -23,8 +22,12 @@ pub fn table(name: String, function: fn(Table(index, record)) -> x) -> Nil {
 
 pub fn users_table(records quantity: Int) -> Table(Int, user.User) {
   let assert Ok(table) =
-    Config(name: "test_users", access: Private, kind: Set, registered: False)
-    |> lamb.create()
+    lamb.create(
+      name: "test_users",
+      access: Private,
+      kind: Set,
+      registered: False,
+    )
 
   let enums =
     iterator.from_list([0, 1, 2])

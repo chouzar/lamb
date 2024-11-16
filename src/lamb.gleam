@@ -24,10 +24,6 @@ type TableId =
 type Name =
   atom.Atom
 
-pub type Config {
-  Config(name: String, access: Access, kind: Kind, registered: Bool)
-}
-
 pub type Kind {
   Set
   Bag
@@ -45,9 +41,13 @@ pub type Error {
   AlreadyRegistered(Name)
 }
 
-pub fn create(config: Config) -> Result(Table(index, record), Error) {
+pub fn create(
+  name name: String,
+  access access: Access,
+  kind kind: Kind,
+  registered registered: Bool,
+) -> Result(Table(index, record), Error) {
   // Parameter docs: https://www.erlang.org/doc/apps/stdlib/ets.html#new/2
-  let Config(name, access, kind, registered) = config
   let name = atom.create_from_string(name)
 
   let create = fn() {
