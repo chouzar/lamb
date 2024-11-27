@@ -1,105 +1,215 @@
-import artifacts/setup
-import artifacts/user.{Admin, Guest, User}
+import artifacts/user.{User}
+import gleam/iterator
 import gleam/list
 import gleeunit
-import lamb.{End, Private, Records, Set}
-import lamb/query as q
+import gleeunit/should
+import lamb.{Bag, End, Private, Protected, Public, Records, Set}
+import lamb/query
+import lamb/query/term.{any, tag, var}
 
 pub fn main() {
   gleeunit.main()
 }
 
-pub fn table_test() {
-  // Able to create a private table
-  let assert Ok(t0) = lamb.create("test_table", Private, Set, False)
-  let assert True = lamb.is_alive(t0)
+pub fn able_to_create_table_test() {
+  let assert Ok(_) = lamb.create("test_table", Private, Set, False)
+  let assert Ok(_) = lamb.create("test_table", Public, Set, False)
+  let assert Ok(_) = lamb.create("test_table", Protected, Set, False)
+  let assert Ok(_) = lamb.create("test_table", Private, Bag, False)
+  let assert Ok(_) = lamb.create("test_table", Public, Bag, False)
+  let assert Ok(_) = lamb.create("test_table", Protected, Bag, False)
+}
 
-  // Able to create a private table with same name
-  let assert Ok(t1) = lamb.create("test_table", Private, Set, False)
-  let assert True = lamb.is_alive(t1)
-
-  // Able to create a registered table
-  let assert Ok(t2) = lamb.create("test_table", Private, Set, True)
-  let assert True = lamb.is_alive(t2)
-
-  // Unable to create a registered table with same name
+pub fn unable_to_create_registered_tables_with_duplicate_names_test() {
+  let assert Ok(table) = lamb.create("test_table", Private, Set, True)
   let assert Error(_) = lamb.create("test_table", Private, Set, True)
-
-  // Able to retrieve a table by name
-  let assert Ok(_) = lamb.from_name("test_table")
-
-  // Able to delete a table
-  lamb.delete(t0)
-  let assert False = lamb.is_alive(t0)
-
-  lamb.delete(t1)
-  let assert False = lamb.is_alive(t1)
-
-  lamb.delete(t2)
-  let assert False = lamb.is_alive(t2)
-  let assert Error(_) = lamb.from_name("test_table")
+  lamb.delete(table)
 }
 
-pub fn record_test() {
-  setup.table("insert records", fn(table) {
-    let assert [] = lamb.all(table, q.new())
-
-    lamb.insert(table, "a", user.random(1))
-    let assert [_] = lamb.all(table, q.new())
-
-    lamb.insert(table, "b", user.random(2))
-    let assert [_, _] = lamb.all(table, q.new())
-
-    lamb.insert(table, "c", user.random(3))
-    let assert [_, _, _] = lamb.all(table, q.new())
-  })
-
-  setup.table("delete records", fn(table) {
-    let assert [] = lamb.all(table, q.new())
-
-    lamb.insert(table, "a", user.random(1))
-    lamb.insert(table, "b", user.random(2))
-    lamb.insert(table, "c", user.random(3))
-
-    let assert 3 = lamb.erase(table, q.new())
-    let assert [] = lamb.all(table, q.new())
-  })
+pub fn able_to_delete_table_test() {
+  let assert Ok(table) = lamb.create("test_table", Private, Set, False)
+  let assert True = lamb.is_alive(table)
+  lamb.delete(table)
 }
 
-pub fn simple_query_test() {
-  setup.table("retrieve all", fn(table) {
-    lamb.insert(table, "a", Admin(1))
-    lamb.insert(table, "b", Admin(2))
-    let assert [Admin(_), Admin(_)] = lamb.all(table, q.new())
+pub fn able_to_retrieve_table_test() {
+  let assert Ok(x) = lamb.create("test_table", Private, Set, True)
+  let assert Ok(y) = lamb.from_name("test_table")
+  should.be_true(x == y)
+  lamb.delete(x)
+  lamb.from_name("test_table") |> should.be_error()
+}
+
+pub fn unable_to_retrieve_dead_table_test() {
+  let assert Ok(table) = lamb.create("test_table", Private, Set, True)
+  lamb.delete(table)
+  lamb.from_name("test_table") |> should.be_error()
+}
+
+pub fn unable_to_retrieve_unregistered_table_test() {
+  lamb.from_name("non-existant") |> should.be_error()
+}
+
+pub fn able_to_determine_table_is_alive_test() {
+  let assert Ok(table) = lamb.create("test_table", Private, Set, False)
+  should.be_true(lamb.is_alive(table))
+
+  lamb.delete(table)
+  should.be_false(lamb.is_alive(table))
+}
+
+pub fn able_to_insert_record_test() {
+  let assert Ok(table) = lamb.create("test_table", Private, Set, False)
+  lamb.insert(table, 1, user.generate(0))
+  lamb.insert(table, 2, user.generate(1))
+  lamb.insert(table, 3, user.generate(2))
+
+  let assert 3 = lamb.count(table, query.new())
+}
+
+pub fn able_to_overwrite_record_test() {
+  let assert Ok(table) = lamb.create("test_table", Private, Set, False)
+  lamb.insert(table, 1, user.generate(0))
+  lamb.insert(table, 1, user.generate(1))
+  lamb.insert(table, 1, user.generate(2))
+
+  let assert 1 = lamb.count(table, query.new())
+}
+
+pub fn able_to_remove_records_test() {
+  let assert Ok(table) = lamb.create("test_table", Private, Set, False)
+  lamb.insert(table, 1, user.generate(0))
+  lamb.insert(table, 2, user.generate(1))
+  lamb.insert(table, 3, user.generate(2))
+
+  let assert 3 = lamb.count(table, query.new())
+  lamb.remove(table, query.new())
+  let assert 0 = lamb.count(table, query.new())
+}
+
+pub fn able_to_remove_specific_records_test() {
+  let table = initialize_users_table(333)
+
+  let assert 333 = lamb.count(table, query.new())
+
+  lamb.remove(table, query.new() |> query.index(1))
+  let assert 332 = lamb.count(table, query.new())
+
+  lamb.remove(table, query.new() |> query.index(2))
+  let assert 331 = lamb.count(table, query.new())
+
+  lamb.remove(table, query.new() |> query.index(3))
+  let assert 330 = lamb.count(table, query.new())
+
+  lamb.remove(table, query.new() |> query.record(#(tag("guest"), any(), any())))
+  let assert 220 = lamb.count(table, query.new())
+
+  lamb.remove(table, query.new() |> query.record(#(tag("admin"), any())))
+  let assert 110 = lamb.count(table, query.new())
+}
+
+pub fn able_to_search_for_specific_records_test() {
+  let table = initialize_users_table(333)
+
+  let user_spec = #(tag("user"), any(), any(), any())
+  let guest_spec = #(tag("guest"), any(), any())
+  let admin_spec = #(tag("admin"), any())
+
+  let query = fn(spec: spec) { query.new() |> query.record(spec) }
+
+  let assert 333 = lamb.search(table, query.new()) |> list.length()
+
+  let assert 111 =
+    lamb.search(table, query(user_spec))
+    |> list.length()
+
+  let assert 111 =
+    lamb.search(table, query(guest_spec))
+    |> list.length()
+
+  let assert 111 =
+    lamb.search(table, query(admin_spec))
+    |> list.length()
+
+  let assert 111 =
+    lamb.search(table, query(admin_spec))
+    |> list.length()
+
+  let assert [_] = lamb.search(table, query.new() |> query.index(1))
+  let assert [_] = lamb.search(table, query.new() |> query.index(2))
+  let assert [_] = lamb.search(table, query.new() |> query.index(3))
+}
+
+pub fn able_to_map_into_custom_records_test() {
+  let assert Ok(table) = lamb.create("test_table", Private, Set, False)
+  let record = User(name: "Raúl", age: 35, bio: "likes his hobbies")
+  lamb.insert(table, 1, record)
+
+  let user_spec = #(tag("user"), var(1), var(2), any())
+  let custom_record = fn(index, _record) { #(var(1), var(2), index) }
+
+  let query =
+    query.new()
+    |> query.index(matches: var(0))
+    |> query.record(matches: user_spec)
+    |> query.map(into: custom_record)
+
+  let assert [user] = lamb.search(table, query)
+  let assert #("Raúl", 35, 1) = user
+}
+
+pub fn able_to_batch_for_records_test() {
+  let table = initialize_users_table(333)
+
+  let query =
+    query.new() |> query.record(matches: #(tag("user"), any(), any(), any()))
+
+  let assert Records(records, step) = lamb.batch(table, 33, query)
+  let assert 33 = list.length(records)
+
+  let assert Records(records, step) = lamb.continue(step)
+  let assert 33 = list.length(records)
+
+  let assert Records(records, step) = lamb.continue(step)
+  let assert 33 = list.length(records)
+
+  let assert End(records) = lamb.continue(step)
+  let assert 12 = list.length(records)
+}
+
+pub fn able_to_count_specific_records_test() {
+  let table = initialize_users_table(333)
+
+  let user_spec = #(tag("user"), any(), any(), any())
+  let guest_spec = #(tag("guest"), any(), any())
+  let admin_spec = #(tag("admin"), any())
+
+  let query = fn(spec: spec) { query.new() |> query.record(spec) }
+
+  let assert 333 = lamb.count(table, query.new())
+  let assert 111 = lamb.count(table, query(user_spec))
+  let assert 111 = lamb.count(table, query(guest_spec))
+  let assert 111 = lamb.count(table, query(admin_spec))
+  let assert 111 = lamb.count(table, query(admin_spec))
+  let assert 1 = lamb.count(table, query.new() |> query.index(1))
+  let assert 1 = lamb.count(table, query.new() |> query.index(2))
+  let assert 1 = lamb.count(table, query.new() |> query.index(3))
+}
+
+fn initialize_users_table(records quantity: Int) -> lamb.Table(Int, user.User) {
+  let assert Ok(table) =
+    lamb.create(name: "users", access: Private, kind: Set, registered: False)
+
+  let enums =
+    iterator.from_list([0, 1, 2])
+    |> iterator.cycle()
+
+  let ids = iterator.range(1, quantity)
+
+  iterator.map2(enums, ids, fn(enum, id) { #(id, enum) })
+  |> iterator.each(fn(params) {
+    lamb.insert(table, params.0, user.generate(params.1))
   })
 
-  setup.table("retrieve partial", fn(table) {
-    lamb.insert(table, "a", Admin(id: 1))
-    lamb.insert(table, "b", Admin(id: 2))
-    lamb.insert(table, "c", Admin(id: 3))
-    lamb.insert(table, "d", Admin(id: 4))
-    lamb.insert(table, "e", Admin(id: 5))
-
-    let assert Records([_, _] as a, step) = lamb.batch(table, 2, q.new())
-    let assert Records([_, _] as b, step) = lamb.continue(step)
-    let assert End([_] as c) = lamb.continue(step)
-
-    let assert [Admin(_), Admin(_), Admin(_), Admin(_), Admin(_)] =
-      list.concat([a, b, c])
-  })
-
-  setup.table("count", fn(table) {
-    lamb.insert(table, "a", user.generate_admin(1))
-    lamb.insert(table, "b", user.generate_guest(2))
-    lamb.insert(table, "c", user.generate_guest(3))
-    lamb.insert(table, "d", user.generate_user(4))
-    lamb.insert(table, "e", user.generate_user(5))
-    lamb.insert(table, "f", user.generate_user(6))
-
-    let assert 6 = lamb.count(table, q.new())
-
-    let assert 1 = lamb.count(table, q.new() |> q.bind1(Admin))
-    let assert 2 = lamb.count(table, q.new() |> q.bind3(Guest))
-    let assert 3 = lamb.count(table, q.new() |> q.bind4(User))
-  })
+  table
 }

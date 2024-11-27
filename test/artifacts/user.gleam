@@ -3,34 +3,33 @@ import gleam/int
 import gleam/list
 
 pub type User {
-  User(id: Int, name: String, age: Int, bio: String)
-  Guest(id: Int, x: Float, y: Float)
+  User(name: String, age: Int, bio: String)
+  Guest(x: Float, y: Float)
   Admin(id: Int)
 }
 
-pub fn random(id: Int) -> User {
-  let assert [record, ..] = list.shuffle([0, 1, 2])
-  generate(record, id)
-}
-
-pub fn generate(enum: Int, id: Int) -> User {
+pub fn generate(enum: Int) -> User {
   case enum {
-    0 -> generate_user(id)
-    1 -> generate_guest(id)
-    _ -> generate_admin(id)
+    0 -> generate_user()
+    1 -> generate_guest()
+    _ -> generate_admin()
   }
 }
 
-pub fn generate_user(id: Int) -> User {
-  User(id: id, name: gen_name(), age: gen_age(), bio: gen_bio())
+pub fn generate_user() -> User {
+  User(name: gen_name(), age: gen_age(), bio: gen_bio())
 }
 
-pub fn generate_guest(id: Int) -> User {
-  Guest(id: id, x: gen_location(), y: gen_location())
+pub fn generate_guest() -> User {
+  Guest(x: gen_location(), y: gen_location())
 }
 
-pub fn generate_admin(id: Int) -> User {
-  Admin(id: id)
+pub fn generate_admin() -> User {
+  Admin(id: gen_id())
+}
+
+fn gen_id() -> Int {
+  int.random(100_000)
 }
 
 fn gen_name() -> String {
