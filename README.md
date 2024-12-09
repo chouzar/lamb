@@ -15,7 +15,7 @@ type User {
 }
 
 pub fn main() {
-  // Create a table and insert 5 records.
+  // Create a table and insert 4 records.
   let assert Ok(table) = lamb.create("users", Private, Set, False)
 
   lamb.insert(table, 1, User("Raúl", age: 35, bio: "While at friends gatherings, plays yugioh."))
@@ -28,7 +28,7 @@ pub fn main() {
 
   // Retrieve all User ids.
   let to_index = fn(index, _record) { index }
-  
+
   let query =
     query.new()
     |> query.index(t.v(0))
