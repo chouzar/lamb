@@ -108,6 +108,30 @@ pub fn able_to_remove_specific_records_test() {
   let assert 110 = lamb.count(table, query.new())
 }
 
+pub fn able_to_lookup_for_specific_records_test() {
+  let assert Ok(table) = lamb.create("test_table", Private, Set, False)
+  lamb.insert(table, 1, user.generate(0))
+  lamb.insert(table, 2, user.generate(1))
+  lamb.insert(table, 3, user.generate(2))
+
+  let assert [_] = lamb.lookup(table, 1)
+  let assert [_] = lamb.lookup(table, 2)
+  let assert [_] = lamb.lookup(table, 3)
+  let assert [] = lamb.lookup(table, 4)
+}
+
+pub fn able_to_look_if_there_are_any_records_test() {
+  let assert Ok(table) = lamb.create("test_table", Private, Set, False)
+  lamb.insert(table, 1, user.generate(0))
+  lamb.insert(table, 2, user.generate(1))
+  lamb.insert(table, 3, user.generate(2))
+
+  let assert True = lamb.any(table, 1)
+  let assert True = lamb.any(table, 2)
+  let assert True = lamb.any(table, 3)
+  let assert False = lamb.any(table, 4)
+}
+
 pub fn able_to_search_for_specific_records_test() {
   let table = initialize_users_table(333)
 
@@ -138,6 +162,7 @@ pub fn able_to_search_for_specific_records_test() {
   let assert [_] = lamb.search(table, query.new() |> query.index(1))
   let assert [_] = lamb.search(table, query.new() |> query.index(2))
   let assert [_] = lamb.search(table, query.new() |> query.index(3))
+  let assert [] = lamb.search(table, query.new() |> query.index(0))
 }
 
 pub fn able_to_map_into_custom_records_test() {
@@ -194,6 +219,7 @@ pub fn able_to_count_specific_records_test() {
   let assert 1 = lamb.count(table, query.new() |> query.index(1))
   let assert 1 = lamb.count(table, query.new() |> query.index(2))
   let assert 1 = lamb.count(table, query.new() |> query.index(3))
+  let assert 0 = lamb.count(table, query.new() |> query.index(0))
 }
 
 fn initialize_users_table(records quantity: Int) -> lamb.Table(Int, user.User) {

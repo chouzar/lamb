@@ -142,6 +142,17 @@ pub type Partial(record) {
 
 pub type Step
 
+pub fn lookup(from table: Table(index, record), is index: index) -> List(record) {
+  case table.kind {
+    Set -> ffi_lookup_set(table.reference, index)
+    Bag -> ffi_lookup_bag(table.reference, index)
+  }
+}
+
+pub fn any(from table: Table(index, record), is index: index) -> Bool {
+  ffi_member(table.reference, index)
+}
+
 pub fn search(
   from table: Table(index, record),
   where query: Query(a, b, c),
@@ -168,6 +179,15 @@ pub fn count(
   let query = query |> query.map(fn(_, _) { True })
   ffi_select_count(table.reference, [query])
 }
+
+@external(erlang, "lamb_erlang_ffi", "lookup_set")
+fn ffi_lookup_set(table: TableId, key: index) -> List(records)
+
+@external(erlang, "lamb_erlang_ffi", "lookup_bag")
+fn ffi_lookup_bag(table: TableId, key: index) -> List(records)
+
+@external(erlang, "ets", "member")
+fn ffi_member(table: TableId, key: index) -> Bool
 
 @external(erlang, "ets", "select")
 fn ffi_select(table: TableId, queries: List(Query(a, b, c))) -> List(x)

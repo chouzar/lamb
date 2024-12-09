@@ -1,7 +1,7 @@
 -module(lamb_erlang_ffi).
 
--export([create_table/4, table_id/1, table_info/1, batch/3, continue/1, wrap_tuple/1,
-         test_query/2]).
+-export([create_table/4, table_id/1, table_info/1, lookup_set/2, lookup_bag/2, batch/3,
+         continue/1, wrap_tuple/1, test_query/2]).
 
 create_table(Name, Access, Kind, false)
     when is_atom(Name), is_atom(Access), is_atom(Kind) ->
@@ -45,6 +45,17 @@ extract_info(Params) ->
      {protection, Protection}] =
         Params,
     {Name, Type, Protection, NamedTable}.
+
+lookup_set(TableId, Index) ->
+    case ets:lookup_element(TableId, Index, 2, error) of
+        error ->
+            [];
+        Record ->
+            [Record]
+    end.
+
+lookup_bag(TableId, Index) ->
+    ets:lookup_element(TableId, Index, 2, []).
 
 batch(TableId, Limit, MatchExpression) ->
     Result = ets:select(TableId, MatchExpression, Limit),
