@@ -50,3 +50,17 @@ The API does rely on matchspecs to query stored data, in [erlang matchspecs](htt
 - A `Body` that declares the shape and variables we'd like to output from the `MatchFunction`.
 
 None of the current operations enforce types, querying so far is a "dynamic" operation.
+
+## Development
+
+Run tests:
+
+```sh
+gleam test
+```
+
+Run benchmarks:
+
+```sh
+gleam run --module benchmark
+```
