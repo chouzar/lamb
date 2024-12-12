@@ -64,3 +64,9 @@ Run benchmarks:
 ```sh
 gleam run --module benchmark
 ```
+
+## Installation
+
+```sh
+gleam add lamb
+```
