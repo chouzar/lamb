@@ -23,7 +23,9 @@ type Name =
 
 pub type Kind {
   Set
+  OrderedSet
   Bag
+  DuplicateBag
 }
 
 pub type Access {
@@ -144,8 +146,8 @@ pub type Step
 
 pub fn lookup(from table: Table(index, record), is index: index) -> List(record) {
   case table.kind {
-    Set -> ffi_lookup_set(table.reference, index)
-    Bag -> ffi_lookup_bag(table.reference, index)
+    Set | OrderedSet -> ffi_lookup_set(table.reference, index)
+    Bag | DuplicateBag -> ffi_lookup_bag(table.reference, index)
   }
 }
 
